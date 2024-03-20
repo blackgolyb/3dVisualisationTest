@@ -193,24 +193,32 @@ function getBezierCubic(points) {
 function evaluateBezier(points, n) {
   const curves = getBezierCubic(points);
   const result = [];
-  for (let i = 0; i < curves.length-1; i++) {
-    for (let j = 0; j < n; j++) {
-      result.push(curves[i](j/n));
-    }
+
+  n = n-1;
+  const cn = curves.length
+  const eps = 0.000001;
+
+  for (let i = 0; i < n; i++) {
+    const t = i / n;
+    const ct = Math.max(Math.min(t * cn, cn-eps), 0);
+    const ci = Math.floor(ct);
+
+    const curve = curves[ci];
+    result.push(curve(ct-ci));
   }
 
-  for (let j = 0; j <= n; j++) {
-    result.push(curves[curves.length-1](j/n));
-  }
-  
+  result.push(points[points.length - 1]);
+
   return result;
 }
 
-const createShapeFromData = (data, subdivisions=1, dataSomethingCoefficient=1) => {
+const createShapeFromData = (data, subdivisions=1, discretization=1) => {
   const widthSegments = data.length * Math.pow(2, subdivisions);
   const heightSegments = data[0].length - 1;
 
-  const geometry = new THREE.SphereGeometry(0, widthSegments, heightSegments*dataSomethingCoefficient);
+  const heightSegmentsSmooth = Math.floor(180 / discretization) + 1;
+
+  const geometry = new THREE.SphereGeometry(0, widthSegments, heightSegmentsSmooth);
   const sidesOffset = interpolateOffsets(data, subdivisions);
   console.log(sidesOffset);
 
@@ -224,7 +232,7 @@ const createShapeFromData = (data, subdivisions=1, dataSomethingCoefficient=1) =
     const decPoints = polarPoints.map((value, index) => {
       return polarToCartesian(value[0], value[1])
     });
-    const interpolatedPoints = evaluateBezier(decPoints, dataSomethingCoefficient);
+    const interpolatedPoints = evaluateBezier(decPoints, heightSegmentsSmooth);
 
     for (let index = 0; index < interpolatedPoints.length; index++) {
       const delta = new THREE.Vector3(
@@ -272,12 +280,12 @@ export const createLightRayScene = () => {
   const data = [tableRightSide, tableLeftSide];
   
   // Создание BufferGeometry для сферы
-  const dataSomethingCoefficient = 4;
+  const discretization = 10; // in degrees
   const subdivisions = 4;
   // const gradient = ["#ffd700", "#0057b7"];
   // const gradient = ["#ff0000", "#00ff00",  "#0000ff"];
   const gradient = ["#ff0000"];
-  const geometry = createShapeFromData(data, subdivisions, dataSomethingCoefficient);
+  const geometry = createShapeFromData(data, subdivisions, discretization);
   // paintGradient(geometry, gradient, [0, undefined]);
   // paintGradient(geometry, gradient, [0, 6]);
   // paintGradient(geometry, gradient, [0, 0]);
